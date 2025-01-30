@@ -81,16 +81,28 @@ const getUserWithId = (id) => {
  * @return {Promise<{}>} A promise to the user.
  */
 const addUser = (user) => {
+  // First, check if the email already exists in the database
   return pool
     .query(
-      `INSERT INTO users (name, email, password) 
-      VALUES ($1, $2, $3) 
-      RETURNING *;`,  // Insert new user and return the newly created row
-      [user.name, user.email, user.password]  // Pass user details as parameters
+      `SELECT * FROM users WHERE LOWER(email) = LOWER($1);`,  // Check for an existing user with the same email
+      [user.email]
     )
     .then((result) => {
-      // The inserted user data is in result.rows[0]
-      const newUser = result.rows[0];
+      // If an existing user is found, return an error message
+      if (result.rows.length > 0) {
+        throw new Error('Email is already in use');  // Throw an error if email is already taken
+      }
+
+      // If email is not taken, proceed with the user insertion
+      return pool.query(
+        `INSERT INTO users (name, email, password) 
+        VALUES ($1, $2, $3) 
+        RETURNING *;`,  // Insert the new user and return the inserted user
+        [user.name, user.email, user.password]
+      );
+    })
+    .then((result) => {
+      const newUser = result.rows[0];  // Get the newly inserted user
       return newUser;  // Return the newly added user
     })
     .catch((err) => {
@@ -98,7 +110,6 @@ const addUser = (user) => {
       throw err;  // Re-throw the error to propagate it
     });
 };
-
 /// Reservations
 
 /**
