@@ -21,6 +21,7 @@ const pool = new Pool({
  */
 
 const getUserWithEmail = (email) => {
+  //console.log("Email being queried:", email);
   return pool
     .query(
       `
@@ -41,9 +42,9 @@ const getUserWithEmail = (email) => {
     })    
     .catch((err) => {
       console.log(err.message);
+      throw err;
     });
   };
-
 
 
 /**
@@ -70,6 +71,7 @@ const getUserWithId = (id) => {
   })    
   .catch((err) => {
     console.log(err.message);
+    throw err;
   })
 };
 
@@ -78,11 +80,23 @@ const getUserWithId = (id) => {
  * @param {{name: string, password: string, email: string}} user
  * @return {Promise<{}>} A promise to the user.
  */
-const addUser = function (user) {
-  const userId = Object.keys(users).length + 1;
-  user.id = userId;
-  users[userId] = user;
-  return Promise.resolve(user);
+const addUser = (user) => {
+  return pool
+    .query(
+      `INSERT INTO users (name, email, password) 
+      VALUES ($1, $2, $3) 
+      RETURNING *;`,  // Insert new user and return the newly created row
+      [user.name, user.email, user.password]  // Pass user details as parameters
+    )
+    .then((result) => {
+      // The inserted user data is in result.rows[0]
+      const newUser = result.rows[0];
+      return newUser;  // Return the newly added user
+    })
+    .catch((err) => {
+      console.log("Error:", err.message);  // Log any errors
+      throw err;  // Re-throw the error to propagate it
+    });
 };
 
 /// Reservations
