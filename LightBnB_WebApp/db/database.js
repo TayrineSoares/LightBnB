@@ -167,32 +167,25 @@ const getAllProperties = function (options, limit = 10) {
 
 
   // Start the query with all information that comes before the WHERE clause.
+  // WHERE 1=1 eliminate the check for an existing WHERE clause and allows us  to use AND for all queries
   let queryString = `
   SELECT properties.*, avg(property_reviews.rating) as average_rating
   FROM properties
   JOIN property_reviews ON properties.id = property_id
+  WHERE 1=1
   `;
-  // Variable to track whether we have already added a WHERE clause
-  let whereClauseAdded = false;
 
   // Check if a city has been passed in as an option. 
   // //Add the city to the params array and create a WHERE clause for the city.
   if (options.city) {
     queryParams.push(`%${options.city}%`);
-    queryString += `WHERE LOWER(city) LIKE $${queryParams.length} `;
-    whereClauseAdded = true;
+    queryString += `AND LOWER(city) LIKE $${queryParams.length} `;
   }
 
   // Check if an owner_id has been passed in. If so, filter by that owner.
   if (options.owner_id) {
     queryParams.push(options.owner_id);
-    // If there's already a WHERE clause, use AND to add the condition for owner_id.
-    if (!whereClauseAdded) {
-      queryString += `WHERE owner_id = $${queryParams.length} `;
-      whereClauseAdded = true;
-    } else {
-      queryString += `AND owner_id = $${queryParams.length} `;
-    }
+    queryString += `AND owner_id = $${queryParams.length} `;
   }
 
   // Check if minimum and maximum price are provided.
@@ -202,14 +195,8 @@ const getAllProperties = function (options, limit = 10) {
     queryParams.push(options.minimum_price_per_night * 100);
     queryParams.push(options.maximum_price_per_night * 100);  
 
-    // Check if a WHERE clause already exists to decide whether to use WHERE or AND
-    if (!whereClauseAdded) {
-      queryString += `WHERE cost_per_night >= $${queryParams.length - 1} AND cost_per_night <= $${queryParams.length} `;
-      whereClauseAdded = true;
-    } else {
-      queryString += `AND cost_per_night >= $${queryParams.length - 1} AND cost_per_night <= $${queryParams.length} `;
+    queryString += `AND cost_per_night >= $${queryParams.length - 1} AND cost_per_night <= $${queryParams.length} `;
     }
-  }
 
 
   // Add queries that come after the WHERE and before the HAVING clause.
@@ -232,7 +219,7 @@ const getAllProperties = function (options, limit = 10) {
     LIMIT $${queryParams.length};
     `;
 
-  //console.log(queryString, queryParams);
+  console.log(queryString, queryParams);
   return pool.query(queryString, queryParams).then((res) => res.rows);
 };
 
