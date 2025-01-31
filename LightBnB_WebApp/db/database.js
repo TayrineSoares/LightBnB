@@ -175,28 +175,31 @@ const getAllProperties = function (options, limit = 10) {
   WHERE 1=1
   `;
 
-  // Check if a city has been passed in as an option. 
+
+  // CITY FILTER
   // //Add the city to the params array and create a WHERE clause for the city.
   if (options.city) {
     queryParams.push(`%${options.city}%`);
     queryString += `AND LOWER(city) LIKE $${queryParams.length} `;
   }
 
-  // Check if an owner_id has been passed in. If so, filter by that owner.
+  //  OWNER ID FILTER
   if (options.owner_id) {
     queryParams.push(options.owner_id);
     queryString += `AND owner_id = $${queryParams.length} `;
   }
 
-  // Check if minimum and maximum price are provided.
-  if (options.minimum_price_per_night && options.maximum_price_per_night) {
-    
-    // *100 converts dolar to cents 
-    queryParams.push(options.minimum_price_per_night * 100);
-    queryParams.push(options.maximum_price_per_night * 100);  
+  // MINIMUM PRICE FILTER
+  if (options.minimum_price_per_night) {
+    queryParams.push(options.minimum_price_per_night * 100); // Convert dollar to cents
+    queryString += `AND cost_per_night >= $${queryParams.length} `;
+  }
 
-    queryString += `AND cost_per_night >= $${queryParams.length - 1} AND cost_per_night <= $${queryParams.length} `;
-    }
+  // MAXIMUM PRICE FILTER
+  if (options.maximum_price_per_night) {
+    queryParams.push(options.maximum_price_per_night * 100); // Convert dollar to cents
+    queryString += `AND cost_per_night <= $${queryParams.length} `;
+  }
 
 
   // Add queries that come after the WHERE and before the HAVING clause.
@@ -204,7 +207,7 @@ const getAllProperties = function (options, limit = 10) {
   GROUP BY properties.id
   ` ;
 
-  // if a minimum_rating is passed in, only return properties with an average rating equal to or higher than that.
+  // MINUMUM RATING FILTER
   if (options.minimum_rating) {
     queryParams.push(options.minimum_rating);
 
@@ -215,12 +218,17 @@ const getAllProperties = function (options, limit = 10) {
    // Add queries that come after the HAVING clause and before the LIMIT.
   queryParams.push(limit);
   queryString += `
-    ORDER BY cost_per_night DESC
+    ORDER BY cost_per_night
     LIMIT $${queryParams.length};
     `;
 
-  console.log(queryString, queryParams);
-  return pool.query(queryString, queryParams).then((res) => res.rows);
+  //console.log(queryString, queryParams);
+  return pool.query(queryString, queryParams)
+  .then((res) => res.rows)
+  .catch((err) => {
+    console.error('Error executing query:', err);
+    throw new Error('Database query failed');
+  });
 };
 
 
