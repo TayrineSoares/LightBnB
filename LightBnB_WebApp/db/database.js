@@ -21,19 +21,16 @@ const pool = new Pool({
  */
 
 const getUserWithEmail = (email) => {
-  //console.log("Email being queried:", email);
   return pool
     .query(
       `
       SELECT * FROM users 
       WHERE LOWER(users.email) = LOWER($1);
       `,
-      [email] //// Pass the email as a parameter
+      [email] 
     )
 
     .then ((result) => {
-      //console.log("THIS IS MY RESULT OBJECT", result);
-      // result.rows always contains the result of your SQL query
       if (result.rows.length > 0) {
         return result.rows[0];
       } else {
@@ -59,7 +56,7 @@ const getUserWithId = (id) => {
       SELECT * FROM users 
       WHERE users.id = $1;
       `, 
-      [id] //// Pass the id as a parameter
+      [id]
     )
 
   .then((result) => {
@@ -84,7 +81,7 @@ const addUser = (user) => {
   // First, check if the email already exists in the database
   return pool
     .query(
-      `SELECT * FROM users WHERE LOWER(email) = LOWER($1);`,  // Check for an existing user with the same email
+      `SELECT * FROM users WHERE LOWER(email) = LOWER($1);`,
       [user.email]
     )
     .then((result) => {
@@ -107,8 +104,8 @@ const addUser = (user) => {
       return newUser;  // Return the newly added user
     })
     .catch((err) => {
-      console.log("Error:", err.message);  // Log any errors
-      throw err;  // Re-throw the error to propagate it
+      console.log("Error:", err.message);
+      throw err;
     });
 };
 /// Reservations
@@ -137,7 +134,7 @@ const getAllReservations = (guest_id, limit = 10) => {
       `, [guest_id, limit]
     )
     .then ((result) => {
-      //console.log("Query result:", result.rows);  // Log the result for debugging
+
       if (result.rows.length > 0) {
       return result.rows;
       } else {
@@ -150,7 +147,6 @@ const getAllReservations = (guest_id, limit = 10) => {
     });
   };
   
-
 /// Properties
 
 /**
@@ -191,13 +187,13 @@ const getAllProperties = function (options, limit = 10) {
 
   // MINIMUM PRICE FILTER
   if (options.minimum_price_per_night) {
-    queryParams.push(options.minimum_price_per_night * 100); // Convert dollar to cents
+    queryParams.push(options.minimum_price_per_night * 100);
     queryString += `AND cost_per_night >= $${queryParams.length} `;
   }
 
   // MAXIMUM PRICE FILTER
   if (options.maximum_price_per_night) {
-    queryParams.push(options.maximum_price_per_night * 100); // Convert dollar to cents
+    queryParams.push(options.maximum_price_per_night * 100);
     queryString += `AND cost_per_night <= $${queryParams.length} `;
   }
 
@@ -222,7 +218,6 @@ const getAllProperties = function (options, limit = 10) {
     LIMIT $${queryParams.length};
     `;
 
-  //console.log(queryString, queryParams);
   return pool.query(queryString, queryParams)
   .then((res) => res.rows)
   .catch((err) => {
@@ -244,7 +239,7 @@ const addProperty = function (property) {
     property.description,
     property.thumbnail_photo_url,
     property.cover_photo_url,
-    property.cost_per_night * 100, // Convert to cents
+    property.cost_per_night * 100,
     property.street,
     property.city,
     property.province,
