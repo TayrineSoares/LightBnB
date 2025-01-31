@@ -172,20 +172,24 @@ const getAllProperties = function (options, limit = 10) {
   FROM properties
   JOIN property_reviews ON properties.id = property_id
   `;
+  // Variable to track whether we have already added a WHERE clause
+  let whereClauseAdded = false;
 
   // Check if a city has been passed in as an option. 
   // //Add the city to the params array and create a WHERE clause for the city.
   if (options.city) {
     queryParams.push(`%${options.city}%`);
     queryString += `WHERE LOWER(city) LIKE $${queryParams.length} `;
+    whereClauseAdded = true;
   }
 
   // Check if an owner_id has been passed in. If so, filter by that owner.
   if (options.owner_id) {
     queryParams.push(options.owner_id);
     // If there's already a WHERE clause, use AND to add the condition for owner_id.
-    if (queryParams.length === 1) {
+    if (!whereClauseAdded) {
       queryString += `WHERE owner_id = $${queryParams.length} `;
+      whereClauseAdded = true;
     } else {
       queryString += `AND owner_id = $${queryParams.length} `;
     }
@@ -199,47 +203,38 @@ const getAllProperties = function (options, limit = 10) {
     queryParams.push(options.maximum_price_per_night * 100);  
 
     // Check if a WHERE clause already exists to decide whether to use WHERE or AND
-    if (queryParams.length === 2) {
+    if (!whereClauseAdded) {
       queryString += `WHERE cost_per_night >= $${queryParams.length - 1} AND cost_per_night <= $${queryParams.length} `;
+      whereClauseAdded = true;
     } else {
       queryString += `AND cost_per_night >= $${queryParams.length - 1} AND cost_per_night <= $${queryParams.length} `;
     }
   }
 
-  // // if a minimum_rating is passed in, only return properties with an average rating equal to or higher than that.
-  // if (options.minimum_rating) {
-  //   queryParams.push(options.minimum_rating); 
 
-  //   // Check if a WHERE clause already exists
-  //   if (queryParams.length === 3) {
-  //     queryString += `WHERE avg(property_reviews.rating) >= $${queryParams.length} `;
-  //   } else {
-  //     queryString += `AND avg(property_reviews.rating) >= $${queryParams.length} `;
-  //   }
-  // }
-
-
-
-
-
-
-
-
-  // Add queries that come after the WHERE clause.
-  queryParams.push(limit);
+  // Add queries that come after the WHERE and before the HAVING clause.
   queryString += `
   GROUP BY properties.id
-  ORDER BY cost_per_night DESC
-  LIMIT $${queryParams.length};
-  `;
+  ` ;
 
+  // if a minimum_rating is passed in, only return properties with an average rating equal to or higher than that.
+  if (options.minimum_rating) {
+    queryParams.push(options.minimum_rating);
 
-  console.log(queryString, queryParams);
+    // Use HAVING for the aggregate function avg() instead of WHERE
+    queryString += `HAVING avg(property_reviews.rating) >= $${queryParams.length} `;
+  }
 
+   // Add queries that come after the HAVING clause and before the LIMIT.
+  queryParams.push(limit);
+  queryString += `
+    ORDER BY cost_per_night DESC
+    LIMIT $${queryParams.length};
+    `;
 
+  //console.log(queryString, queryParams);
   return pool.query(queryString, queryParams).then((res) => res.rows);
 };
-
 
 
 /**
